@@ -111,10 +111,10 @@ func (g *Graph) Remove(v Vertex) Vertex {
 	g.vertices.Delete(v)
 
 	// Delete the edges to non-existent things
-	for _, target := range g.DownEdges(v) {
+	for _, target := range g.downEdges[v] {
 		g.RemoveEdge(BasicEdge(v, target))
 	}
-	for _, source := range g.UpEdges(v) {
+	for _, source := range g.upEdges[v] {
 		g.RemoveEdge(BasicEdge(source, v))
 	}
 
@@ -137,10 +137,10 @@ func (g *Graph) Replace(original, replacement Vertex) bool {
 
 	// Add our new vertex, then copy all the edges
 	g.Add(replacement)
-	for _, target := range g.DownEdges(original) {
+	for _, target := range g.downEdges[original] {
 		g.Connect(BasicEdge(replacement, target))
 	}
-	for _, source := range g.UpEdges(original) {
+	for _, source := range g.upEdges[original] {
 		g.Connect(BasicEdge(source, replacement))
 	}
 
@@ -169,13 +169,13 @@ func (g *Graph) RemoveEdge(edge Edge) {
 // DownEdges returns the outward edges from the source Vertex v.
 func (g *Graph) DownEdges(v Vertex) Set {
 	g.init()
-	return g.downEdges[hashcode(v)]
+	return g.downEdges[hashcode(v)].Copy()
 }
 
 // UpEdges returns the inward edges to the destination Vertex v.
 func (g *Graph) UpEdges(v Vertex) Set {
 	g.init()
-	return g.upEdges[hashcode(v)]
+	return g.upEdges[hashcode(v)].Copy()
 }
 
 // Connect adds an edge with the given source and target. This is safe to
