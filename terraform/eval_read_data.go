@@ -282,6 +282,31 @@ func (n *evalReadDataRefresh) Eval(ctx EvalContext) (interface{}, error) {
 	newVal, readDiags := n.readDataSource(ctx, configVal)
 	diags = diags.Append(readDiags)
 	if diags.HasErrors() {
+		if n.forcePlanRead() {
+			// We can't be certain that the read failure was because of a
+			// change in a dependency declared through depends_on, so we're
+			// going to log this error, and re-evaluate the data source again
+			// during plan.
+			log.Printf("[WARN] evalReadDataRefresh: %s returned an error, but will be re-evaluated during plan due to depends_on: %s", absAddr, readDiags.Err())
+
+			*n.OutputChange = &plans.ResourceInstanceChange{
+				Addr:         absAddr,
+				ProviderAddr: n.ProviderAddr,
+				Change: plans.Change{
+					Action: plans.Read,
+					Before: priorVal,
+					After:  objchange.PlannedDataResourceObject(schema, configVal),
+				},
+			}
+
+			*n.State = &states.ResourceInstanceObject{
+				Value:  cty.NullVal(objTy),
+				Status: states.ObjectPlanned,
+			}
+
+			return nil, nil
+		}
+
 		return nil, diags.ErrWithWarnings()
 	}
 
