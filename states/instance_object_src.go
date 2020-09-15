@@ -49,6 +49,9 @@ type ResourceInstanceObjectSrc struct {
 	// the recommendations in the AttrsJSON documentation above.
 	AttrsFlat map[string]string
 
+	// AttrsSensitive is a ...
+	AttrsSensitive []cty.PathValueMarks
+
 	// These fields all correspond to the fields of the same name on
 	// ResourceInstanceObject.
 	Private             []byte

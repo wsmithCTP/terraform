@@ -167,7 +167,9 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if configVal.ContainsMarked() {
 		// store the marked values so we can re-mark them later after
 		// we've sent things over the wire.
+		// fmt.Println("EvalDiff")
 		unmarkedConfigVal, unmarkedPaths = configVal.UnmarkDeepWithPaths()
+		// fmt.Printf("%#v\n", unmarkedPaths)
 	}
 
 	metaConfigVal := cty.NullVal(cty.DynamicPseudoType)

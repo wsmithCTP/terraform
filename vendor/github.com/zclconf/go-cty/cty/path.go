@@ -191,6 +191,19 @@ func (p Path) Copy() Path {
 	return ret
 }
 
+// func (p Path) ToString() string {
+// 	var s string
+// 	for i := range p {
+// 		pv := p[i]
+// 		switch pv := pv.(type) {
+// 		case GetAttrStep:
+// 			s = s + "." + pv.Name
+// 		case IndexStep:
+// 			s = s + "0"
+// 	}
+// 	return s
+// }
+
 // IndexStep is a Step implementation representing applying the index operation
 // to a value, which must be of either a list, map, or set type.
 //

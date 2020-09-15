@@ -452,6 +452,17 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 		}
 	}
 
+	// Convert paths to string representations
+	var paths []string
+	for _, vm := range obj.AttrsSensitive {
+		var s string
+		for _, p := range vm.Path {
+			fmt.Println(p)
+		}
+		s = "foo"
+		paths = append(paths, s)
+	}
+
 	return append(isV4s, instanceObjectStateV4{
 		IndexKey:            rawKey,
 		Deposed:             string(deposed),
@@ -459,6 +470,7 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 		SchemaVersion:       obj.SchemaVersion,
 		AttributesFlat:      obj.AttrsFlat,
 		AttributesRaw:       obj.AttrsJSON,
+		SensitiveAttributes: paths,
 		PrivateRaw:          privateRaw,
 		Dependencies:        deps,
 		CreateBeforeDestroy: obj.CreateBeforeDestroy,
@@ -505,9 +517,10 @@ type instanceObjectStateV4 struct {
 	Status   string      `json:"status,omitempty"`
 	Deposed  string      `json:"deposed,omitempty"`
 
-	SchemaVersion  uint64            `json:"schema_version"`
-	AttributesRaw  json.RawMessage   `json:"attributes,omitempty"`
-	AttributesFlat map[string]string `json:"attributes_flat,omitempty"`
+	SchemaVersion       uint64            `json:"schema_version"`
+	AttributesRaw       json.RawMessage   `json:"attributes,omitempty"`
+	AttributesFlat      map[string]string `json:"attributes_flat,omitempty"`
+	SensitiveAttributes []string          `json:"sensitive_attributes,omitempty,"`
 
 	PrivateRaw []byte `json:"private,omitempty"`
 

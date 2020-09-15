@@ -1,6 +1,8 @@
 package states
 
 import (
+	"fmt"
+
 	"github.com/zclconf/go-cty/cty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
@@ -100,8 +102,10 @@ func (o *ResourceInstanceObject) Encode(ty cty.Type, schemaVersion uint64) (*Res
 
 	// If it contains marks, dump those now
 	unmarked := val
+	var pvm []cty.PathValueMarks
 	if val.ContainsMarked() {
-		unmarked, _ = val.UnmarkDeep()
+		unmarked, pvm = val.UnmarkDeepWithPaths()
+		fmt.Printf("%#v\n", pvm)
 	}
 	src, err := ctyjson.Marshal(unmarked, ty)
 	if err != nil {
@@ -111,6 +115,7 @@ func (o *ResourceInstanceObject) Encode(ty cty.Type, schemaVersion uint64) (*Res
 	return &ResourceInstanceObjectSrc{
 		SchemaVersion:       schemaVersion,
 		AttrsJSON:           src,
+		AttrsSensitive:      pvm,
 		Private:             o.Private,
 		Status:              o.Status,
 		Dependencies:        o.Dependencies,

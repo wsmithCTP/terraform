@@ -1,5 +1,7 @@
 package cty
 
+import "fmt"
+
 // Walk visits all of the values in a possibly-complex structure, calling
 // a given function for each value.
 //
@@ -150,6 +152,7 @@ func transform(path Path, val Value, cb func(Path, Value) (Value, error)) (Value
 				elems[kv.AsString()] = newEv
 			}
 			newVal = MapVal(elems)
+			fmt.Printf("Is Map type: %#v\n", newVal)
 		}
 
 	case ty.IsObjectType():

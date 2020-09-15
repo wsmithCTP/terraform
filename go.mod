@@ -1,5 +1,7 @@
 module github.com/hashicorp/terraform
 
+replace github.com/zclconf/go-cty => /Users/pamselle/Projects/hashi/cty
+
 require (
 	cloud.google.com/go v0.45.1
 	github.com/Azure/azure-sdk-for-go v45.0.0+incompatible
