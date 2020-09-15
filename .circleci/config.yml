@@ -17,11 +17,30 @@ executors:
       GOFLAGS: "-mod=readonly"
 
 jobs:
+  go-download:
+    executor:
+      name: go
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run:
+          name: go mod download
+          command: go mod download
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
   go-checks:
     executor:
       name: go
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - run: go mod verify
       - run: make fmtcheck generate
       - run:
@@ -45,6 +64,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - run:
           name: install consul
           command: |
@@ -86,6 +108,9 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
       - run: mkdir -p $TEST_RESULTS_DIR
       - run:
           name: Run Go E2E Tests
@@ -181,7 +206,10 @@ workflows:
   version: 2
   test:
     jobs:
-      - go-checks
+      - go-download
+      - go-checks:
+          requires:
+            - go-download
       - go-test:
           requires:
             - go-checks
