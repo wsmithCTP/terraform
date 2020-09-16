@@ -248,17 +248,14 @@ func (val Value) UnmarkDeep() (Value, ValueMarks) {
 func (val Value) UnmarkDeepWithPaths() (Value, []PathValueMarks) {
 	var marks []PathValueMarks
 	ret, err := Transform(val, func(p Path, v Value) (Value, error) {
-		fmt.Println("FIRST!")
-		fmt.Println(p)
 		unmarkedV, valueMarks := v.Unmark()
 		if v.IsMarked() {
-			fmt.Printf("UnMark: %#v\n", p)
 			marks = append(marks, PathValueMarks{p, valueMarks})
 		}
 		return unmarkedV, nil
 	})
 	if err != nil {
-		panic("Err!")
+		panic(err)
 	}
 	return ret, marks
 }

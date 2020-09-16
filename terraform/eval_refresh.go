@@ -80,9 +80,11 @@ func (n *EvalRefresh) Eval(ctx EvalContext) (interface{}, error) {
 
 	// Refresh!
 	priorVal := state.Value
+	// Unmarked before sending to provider
+	um, _ := priorVal.UnmarkDeep()
 	req := providers.ReadResourceRequest{
 		TypeName:     n.Addr.Resource.Type,
-		PriorState:   priorVal,
+		PriorState:   um,
 		Private:      state.Private,
 		ProviderMeta: metaConfigVal,
 	}

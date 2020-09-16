@@ -167,9 +167,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if configVal.ContainsMarked() {
 		// store the marked values so we can re-mark them later after
 		// we've sent things over the wire.
-		// fmt.Println("EvalDiff")
 		unmarkedConfigVal, unmarkedPaths = configVal.UnmarkDeepWithPaths()
-		// fmt.Printf("%#v\n", unmarkedPaths)
 	}
 
 	metaConfigVal := cty.NullVal(cty.DynamicPseudoType)
@@ -215,7 +213,16 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		priorVal = cty.NullVal(schema.ImpliedType())
 	}
 
-	proposedNewVal := objchange.ProposedNewObject(schema, priorVal, unmarkedConfigVal)
+	unmarkedPriorVal := priorVal
+	// var unmarkedPriorPaths []cty.PathValueMarks
+	if priorVal.ContainsMarked() {
+		// store the marked values so we can re-mark them later after
+		// we've sent things over the wire.
+		fmt.Println("unmarking in eval diff")
+		unmarkedPriorVal, _ = priorVal.UnmarkDeepWithPaths()
+	}
+
+	proposedNewVal := objchange.ProposedNewObject(schema, unmarkedPriorVal, unmarkedConfigVal)
 
 	// Call pre-diff hook
 	if !n.Stub {
@@ -246,7 +253,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	// we send back this information, we need to process ignore_changes
 	// so that CustomizeDiff will not act on them
 	var ignoreChangeDiags tfdiags.Diagnostics
-	proposedNewVal, ignoreChangeDiags = n.processIgnoreChanges(priorVal, proposedNewVal)
+	proposedNewVal, ignoreChangeDiags = n.processIgnoreChanges(unmarkedPriorVal, proposedNewVal)
 	diags = diags.Append(ignoreChangeDiags)
 	if ignoreChangeDiags.HasErrors() {
 		return nil, diags.Err()
@@ -255,7 +262,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	resp := provider.PlanResourceChange(providers.PlanResourceChangeRequest{
 		TypeName:         n.Addr.Resource.Type,
 		Config:           unmarkedConfigVal,
-		PriorState:       priorVal,
+		PriorState:       unmarkedPriorVal,
 		ProposedNewState: proposedNewVal,
 		PriorPrivate:     priorPrivate,
 		ProviderMeta:     metaConfigVal,
@@ -354,7 +361,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 				continue
 			}
 
-			priorChangedVal, priorPathDiags := hcl.ApplyPath(priorVal, path, nil)
+			priorChangedVal, priorPathDiags := hcl.ApplyPath(unmarkedPriorVal, path, nil)
 			plannedChangedVal, plannedPathDiags := hcl.ApplyPath(plannedNewVal, path, nil)
 			if plannedPathDiags.HasErrors() && priorPathDiags.HasErrors() {
 				// This means the path was invalid in both the prior and new
@@ -386,7 +393,9 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 				plannedChangedVal = cty.NullVal(priorChangedVal.Type())
 			}
 
-			eqV := plannedChangedVal.Equals(priorChangedVal)
+			unmarkedPlannedChangedValVal, _ := plannedChangedVal.UnmarkDeep()
+
+			eqV := unmarkedPlannedChangedValVal.Equals(priorChangedVal)
 			if !eqV.IsKnown() || eqV.False() {
 				reqRep.Add(path)
 			}
@@ -396,7 +405,11 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		}
 	}
 
-	eqV := plannedNewVal.Equals(priorVal)
+	// Unmark for this test for equality
+	unmarkedPlannedNewVal, _ := plannedNewVal.UnmarkDeep()
+
+	// TODO if one is marked and one is not, they are not equal!
+	eqV := unmarkedPlannedNewVal.Equals(unmarkedPriorVal)
 	eq := eqV.IsKnown() && eqV.True()
 
 	var action plans.Action
@@ -434,11 +447,11 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 		nullPriorVal := cty.NullVal(schema.ImpliedType())
 
 		// create a new proposed value from the null state and the config
-		proposedNewVal = objchange.ProposedNewObject(schema, nullPriorVal, configVal)
+		proposedNewVal = objchange.ProposedNewObject(schema, nullPriorVal, unmarkedConfigVal)
 
 		resp = provider.PlanResourceChange(providers.PlanResourceChangeRequest{
 			TypeName:         n.Addr.Resource.Type,
-			Config:           configVal,
+			Config:           unmarkedConfigVal,
 			PriorState:       nullPriorVal,
 			ProposedNewState: proposedNewVal,
 			PriorPrivate:     plannedPrivate,
@@ -454,6 +467,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 			return nil, diags.Err()
 		}
 		plannedNewVal = resp.PlannedState
+		// TODO probably remark here something
 		plannedPrivate = resp.PlannedPrivate
 		for _, err := range plannedNewVal.Type().TestConformance(schema.ImpliedType()) {
 			diags = diags.Append(tfdiags.Sourceless(

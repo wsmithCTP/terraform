@@ -768,8 +768,13 @@ func (p *blockBodyDiffPrinter) writeValueDiff(old, new cty.Value, indent int, pa
 	typesEqual := ctyTypesEqual(ty, new.Type())
 
 	// If either the old or new value is marked, don't display the value
-	if old.ContainsMarked() || new.ContainsMarked() {
-		p.buf.WriteString("(sensitive)")
+	if old.ContainsMarked() {
+		p.buf.WriteString("(sensitive old)")
+		return
+	}
+
+	if new.ContainsMarked() {
+		p.buf.WriteString("(sensitive new)")
 		return
 	}
 

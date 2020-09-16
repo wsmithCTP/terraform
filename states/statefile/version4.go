@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	version "github.com/hashicorp/go-version"
+	"github.com/zclconf/go-cty/cty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/hashicorp/terraform/addrs"
@@ -150,6 +151,23 @@ func prepareStateV4(sV4 *stateV4) (*File, tfdiags.Diagnostics) {
 					obj.AttrsJSON = []byte{'{', '}'}
 				}
 			}
+
+			// Sensitive paths
+			// if isV4.AttributePaths != nil {
+			// Convert strings to ValPathMarks
+			// environment[0].variables["foo"]
+			{
+				pvm := []cty.PathValueMarks{
+					{
+						Path: cty.Path{
+							cty.GetAttrStep{Name: "prefix"},
+						},
+						Marks: cty.NewValueMarks("sensitive"),
+					},
+				}
+				obj.AttrPaths = pvm
+			}
+			// }
 
 			{
 				// Status
@@ -452,9 +470,9 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 		}
 	}
 
-	// Convert paths to string representations
+	// TODO Convert paths to string representations
 	var paths []string
-	for _, vm := range obj.AttrsSensitive {
+	for _, vm := range obj.AttrPaths {
 		var s string
 		for _, p := range vm.Path {
 			fmt.Println(p)
@@ -470,7 +488,7 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 		SchemaVersion:       obj.SchemaVersion,
 		AttributesFlat:      obj.AttrsFlat,
 		AttributesRaw:       obj.AttrsJSON,
-		SensitiveAttributes: paths,
+		AttributePaths:      paths,
 		PrivateRaw:          privateRaw,
 		Dependencies:        deps,
 		CreateBeforeDestroy: obj.CreateBeforeDestroy,
@@ -517,10 +535,10 @@ type instanceObjectStateV4 struct {
 	Status   string      `json:"status,omitempty"`
 	Deposed  string      `json:"deposed,omitempty"`
 
-	SchemaVersion       uint64            `json:"schema_version"`
-	AttributesRaw       json.RawMessage   `json:"attributes,omitempty"`
-	AttributesFlat      map[string]string `json:"attributes_flat,omitempty"`
-	SensitiveAttributes []string          `json:"sensitive_attributes,omitempty,"`
+	SchemaVersion  uint64            `json:"schema_version"`
+	AttributesRaw  json.RawMessage   `json:"attributes,omitempty"`
+	AttributesFlat map[string]string `json:"attributes_flat,omitempty"`
+	AttributePaths []string          `json:"sensitive_attributes,omitempty,"`
 
 	PrivateRaw []byte `json:"private,omitempty"`
 
