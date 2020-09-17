@@ -153,21 +153,21 @@ func prepareStateV4(sV4 *stateV4) (*File, tfdiags.Diagnostics) {
 			}
 
 			// Sensitive paths
-			// if isV4.AttributePaths != nil {
-			// Convert strings to ValPathMarks
-			// environment[0].variables["foo"]
-			{
-				pvm := []cty.PathValueMarks{
-					{
-						Path: cty.Path{
-							cty.GetAttrStep{Name: "prefix"},
-						},
+			if isV4.AttributePaths != nil {
+				fmt.Println("attribute paths not nil")
+				// Convert strings to ValPathMarks
+				var pvm []cty.PathValueMarks
+				for _, p := range isV4.AttributePaths {
+					// TODO string to Path method here
+					path := cty.Path{cty.GetAttrStep{Name: p}}
+					pvm = append(pvm, cty.PathValueMarks{
+						Path:  path,
 						Marks: cty.NewValueMarks("sensitive"),
-					},
+					})
 				}
 				obj.AttrPaths = pvm
+
 			}
-			// }
 
 			{
 				// Status
@@ -472,14 +472,19 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 
 	// TODO Convert paths to string representations
 	var paths []string
+	fmt.Println("writing state attr paths")
+	fmt.Println("obj.AttrPaths:\n", obj.AttrPaths)
 	for _, vm := range obj.AttrPaths {
 		var s string
 		for _, p := range vm.Path {
-			fmt.Println(p)
+			switch p := p.(type) {
+			case cty.GetAttrStep:
+				s = p.Name
+			}
 		}
-		s = "foo"
 		paths = append(paths, s)
 	}
+	fmt.Println("string paths:", paths)
 
 	return append(isV4s, instanceObjectStateV4{
 		IndexKey:            rawKey,

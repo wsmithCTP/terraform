@@ -105,7 +105,7 @@ func (o *ResourceInstanceObject) Encode(ty cty.Type, schemaVersion uint64) (*Res
 	var pvm []cty.PathValueMarks
 	if val.ContainsMarked() {
 		unmarked, pvm = val.UnmarkDeepWithPaths()
-		fmt.Printf("%#v\n", pvm)
+		fmt.Printf("ResourceInstanceObject:Encode: \n%#v\n", pvm)
 	}
 	src, err := ctyjson.Marshal(unmarked, ty)
 	if err != nil {

@@ -575,7 +575,5 @@ func (n *EvalRefreshDependencies) Eval(ctx EvalContext) (interface{}, error) {
 
 	*n.Dependencies = deps
 
-	fmt.Println("State val in refresh deps:\n", state.Value)
-
 	return nil, nil
 }
