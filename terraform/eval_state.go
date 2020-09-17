@@ -72,7 +72,6 @@ func (n *EvalReadState) Eval(ctx EvalContext) (interface{}, error) {
 	}
 
 	obj, err := src.Decode(schema.ImpliedType())
-	fmt.Println("Val in eval_state\n", obj.Value)
 	if err != nil {
 		return nil, err
 	}

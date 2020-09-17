@@ -473,7 +473,7 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 	// TODO Convert paths to string representations
 	var paths []string
 	fmt.Println("writing state attr paths")
-	fmt.Println("obj.AttrPaths:\n", obj.AttrPaths)
+	fmt.Printf("obj.AttrPaths: %#v\n", obj.AttrPaths)
 	for _, vm := range obj.AttrPaths {
 		var s string
 		for _, p := range vm.Path {
@@ -484,6 +484,7 @@ func appendInstanceObjectStateV4(rs *states.Resource, is *states.ResourceInstanc
 		}
 		paths = append(paths, s)
 	}
+	// paths = append(paths, "prefix")
 	fmt.Println("string paths:", paths)
 
 	return append(isV4s, instanceObjectStateV4{
