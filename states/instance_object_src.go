@@ -88,7 +88,7 @@ func (os *ResourceInstanceObjectSrc) Decode(ty cty.Type) (*ResourceInstanceObjec
 		if os.AttrPaths != nil {
 			fmt.Println("Marking in Decode")
 			val = val.MarkWithPaths(os.AttrPaths)
-			fmt.Println(val)
+			fmt.Println("val after mark in decode: ", val)
 		}
 		if err != nil {
 			return nil, err

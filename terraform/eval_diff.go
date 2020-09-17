@@ -199,6 +199,7 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	if state != nil {
 		if state.Status != states.ObjectTainted {
 			priorVal = state.Value
+			fmt.Println("Prior val in eval diff:\n", priorVal)
 			priorPrivate = state.Private
 		} else {
 			// If the prior state is tainted then we'll proceed below like
@@ -214,12 +215,12 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	}
 
 	unmarkedPriorVal := priorVal
-	// var unmarkedPriorPaths []cty.PathValueMarks
+	var unmarkedPriorPaths []cty.PathValueMarks
 	if priorVal.ContainsMarked() {
 		// store the marked values so we can re-mark them later after
 		// we've sent things over the wire.
 		fmt.Println("unmarking in eval diff")
-		unmarkedPriorVal, _ = priorVal.UnmarkDeepWithPaths()
+		unmarkedPriorVal, unmarkedPriorPaths = priorVal.UnmarkDeepWithPaths()
 	}
 
 	proposedNewVal := objchange.ProposedNewObject(schema, unmarkedPriorVal, unmarkedConfigVal)
@@ -285,6 +286,10 @@ func (n *EvalDiff) Eval(ctx EvalContext) (interface{}, error) {
 	// Add the marks back to the planned new value
 	if configVal.ContainsMarked() {
 		plannedNewVal = plannedNewVal.MarkWithPaths(unmarkedPaths)
+	}
+	if priorVal.ContainsMarked() {
+		fmt.Println("PRIOR MARKED")
+		plannedNewVal = plannedNewVal.MarkWithPaths(unmarkedPriorPaths)
 	}
 
 	// We allow the planned new value to disagree with configuration _values_

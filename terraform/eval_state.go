@@ -72,6 +72,7 @@ func (n *EvalReadState) Eval(ctx EvalContext) (interface{}, error) {
 	}
 
 	obj, err := src.Decode(schema.ImpliedType())
+	fmt.Println("Val in eval_state\n", obj.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -573,6 +574,8 @@ func (n *EvalRefreshDependencies) Eval(ctx EvalContext) (interface{}, error) {
 	})
 
 	*n.Dependencies = deps
+
+	fmt.Println("State val in refresh deps:\n", state.Value)
 
 	return nil, nil
 }
