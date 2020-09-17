@@ -52,7 +52,7 @@ type ResourceInstanceObjectSrc struct {
 	AttrsFlat map[string]string
 
 	// AttrPaths is an array of paths to mark as sensitive coming out of
-	// state.
+	// state, or to save as sensitive paths when saving state
 	AttrPaths []cty.PathValueMarks
 
 	// These fields all correspond to the fields of the same name on
