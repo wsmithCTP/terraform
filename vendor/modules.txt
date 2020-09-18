@@ -450,11 +450,6 @@ github.com/keybase/go-crypto/openpgp/errors
 github.com/keybase/go-crypto/openpgp/packet
 github.com/keybase/go-crypto/openpgp/s2k
 github.com/keybase/go-crypto/rsa
-# github.com/kr/pretty v0.2.1
-## explicit
-github.com/kr/pretty
-# github.com/kr/text v0.1.0
-github.com/kr/text
 # github.com/lib/pq v1.0.0
 ## explicit
 github.com/lib/pq

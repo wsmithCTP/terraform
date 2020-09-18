@@ -83,7 +83,6 @@ require (
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/keybase/go-crypto v0.0.0-20161004153544-93f5b35093ba // indirect
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/lib/pq v1.0.0
 	github.com/likexian/gokit v0.20.15
 	github.com/lusis/go-artifactory v0.0.0-20160115162124-7e4ce345df82
