@@ -105,7 +105,9 @@ var TypeFunc = function.New(&function.Spec{
 	},
 })
 
-// copy of https://github.com/zclconf/go-cty-debug/blob/master/ctydebug/type_string.go
+// Modified copy of TypeString from go-cty:
+// https://github.com/zclconf/go-cty-debug/blob/master/ctydebug/type_string.go
+//
 // TypeString returns a string representation of a given type that is
 // reminiscent of Go syntax calling into the cty package but is mainly
 // intended for easy human inspection of values in tests, debug output, etc.
