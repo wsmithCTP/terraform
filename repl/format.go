@@ -43,8 +43,10 @@ func FormatValue(v cty.Value, indent int) string {
 	case ty.IsPrimitiveType():
 		switch ty {
 		case cty.String:
-			// FIXME: If it's a multi-line string, better to render it using
-			// HEREDOC-style syntax.
+			// If this is a multi-line string, return it as-is
+			if strings.Contains(v.AsString(), "\n") {
+				return v.AsString()
+			}
 			return strconv.Quote(v.AsString())
 		case cty.Number:
 			bf := v.AsBigFloat()
