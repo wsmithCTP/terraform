@@ -3631,24 +3631,40 @@ func TestResourceChange_sensitiveVariable(t *testing.T) {
 			After: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-123"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
+					cty.StringVal("!"),
+				}),
 			}),
 			AfterValMarks: []cty.PathValueMarks{
 				{
 					Path:  cty.Path{cty.GetAttrStep{Name: "ami"}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(1)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			RequiredReplace: cty.NewPathSet(),
 			Tainted:         false,
 			Schema: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id":  {Type: cty.String, Optional: true, Computed: true},
-					"ami": {Type: cty.String, Optional: true},
+					"id":         {Type: cty.String, Optional: true, Computed: true},
+					"ami":        {Type: cty.String, Optional: true},
+					"list_field": {Type: cty.List(cty.String), Optional: true},
 				},
 			},
 			ExpectedOutput: `  # test_instance.example will be created
   + resource "test_instance" "example" {
-      + ami = (sensitive)
-      + id  = "i-02ae66f368e8518a9"
+      + ami        = (sensitive)
+      + id         = "i-02ae66f368e8518a9"
+      + list_field = [
+          + "hello",
+          + (sensitive),
+          + "!",
+        ]
     }
 `,
 		},
@@ -3658,63 +3674,109 @@ func TestResourceChange_sensitiveVariable(t *testing.T) {
 			Before: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-BEFORE"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
+					cty.StringVal("!"),
+				}),
 			}),
 			After: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-AFTER"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
+					cty.StringVal("."),
+				}),
 			}),
 			BeforeValMarks: []cty.PathValueMarks{
 				{
 					Path:  cty.Path{cty.GetAttrStep{Name: "ami"}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(2)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			RequiredReplace: cty.NewPathSet(),
 			Tainted:         false,
 			Schema: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id":  {Type: cty.String, Optional: true, Computed: true},
-					"ami": {Type: cty.String, Optional: true},
+					"id":         {Type: cty.String, Optional: true, Computed: true},
+					"ami":        {Type: cty.String, Optional: true},
+					"list_field": {Type: cty.List(cty.String), Optional: true},
 				},
 			},
 			ExpectedOutput: `  # test_instance.example will be updated in-place
   ~ resource "test_instance" "example" {
-      ~ ami = (sensitive)
-        id  = "i-02ae66f368e8518a9"
+      ~ ami        = (sensitive)
+        id         = "i-02ae66f368e8518a9"
+      ~ list_field = [
+            # (1 unchanged element hidden)
+            "friends",
+          - (sensitive),
+          + ".",
+        ]
     }
 `,
 		},
-		"in-place update - after sensitive, map type": {
+		"in-place update - after sensitive": {
 			Action: plans.Update,
 			Mode:   addrs.ManagedResourceMode,
 			Before: cty.ObjectVal(map[string]cty.Value{
 				"id": cty.StringVal("i-02ae66f368e8518a9"),
 				"tags": cty.MapVal(map[string]cty.Value{
-					"name": cty.StringVal("anna"),
+					"name":    cty.StringVal("anna a"),
+					"address": cty.StringVal("123 Main St"),
+				}),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
 				}),
 			}),
 			After: cty.ObjectVal(map[string]cty.Value{
 				"id": cty.StringVal("i-02ae66f368e8518a9"),
 				"tags": cty.MapVal(map[string]cty.Value{
-					"name": cty.StringVal("bob"),
+					"name":    cty.StringVal("anna b"),
+					"address": cty.StringVal("123 Main Ave"),
+				}),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("goodbye"),
+					cty.StringVal("friends"),
 				}),
 			}),
 			AfterValMarks: []cty.PathValueMarks{
 				{
-					Path:  cty.Path{cty.GetAttrStep{Name: "tags"}, cty.IndexStep{Key: cty.StringVal("name")}},
+					Path:  cty.Path{cty.GetAttrStep{Name: "tags"}, cty.IndexStep{Key: cty.StringVal("address")}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(0)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			RequiredReplace: cty.NewPathSet(),
 			Tainted:         false,
 			Schema: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id":   {Type: cty.String, Optional: true, Computed: true},
-					"tags": {Type: cty.Map(cty.String), Optional: true},
+					"id":         {Type: cty.String, Optional: true, Computed: true},
+					"tags":       {Type: cty.Map(cty.String), Optional: true},
+					"list_field": {Type: cty.List(cty.String), Optional: true},
 				},
 			},
 			ExpectedOutput: `  # test_instance.example will be updated in-place
   ~ resource "test_instance" "example" {
-        id   = "i-02ae66f368e8518a9"
-      ~ tags = (sensitive)
+        id         = "i-02ae66f368e8518a9"
+      ~ list_field = [
+          - "hello",
+          + (sensitive),
+            "friends",
+        ]
+      ~ tags       = {
+          ~ "address" = (sensitive)
+          ~ "name"    = "anna a" -> "anna b"
+        }
     }
 `,
 		},
@@ -3724,33 +3786,57 @@ func TestResourceChange_sensitiveVariable(t *testing.T) {
 			Before: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-BEFORE"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
+				}),
 			}),
 			After: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-AFTER"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("goodbye"),
+					cty.StringVal("friends"),
+				}),
 			}),
 			BeforeValMarks: []cty.PathValueMarks{
 				{
 					Path:  cty.Path{cty.GetAttrStep{Name: "ami"}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(0)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			AfterValMarks: []cty.PathValueMarks{
 				{
 					Path:  cty.Path{cty.GetAttrStep{Name: "ami"}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(0)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			RequiredReplace: cty.NewPathSet(),
 			Tainted:         false,
 			Schema: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id":  {Type: cty.String, Optional: true, Computed: true},
-					"ami": {Type: cty.String, Optional: true},
+					"id":         {Type: cty.String, Optional: true, Computed: true},
+					"ami":        {Type: cty.String, Optional: true},
+					"list_field": {Type: cty.List(cty.String), Optional: true},
 				},
 			},
 			ExpectedOutput: `  # test_instance.example will be updated in-place
   ~ resource "test_instance" "example" {
-      ~ ami = (sensitive)
-        id  = "i-02ae66f368e8518a9"
+      ~ ami        = (sensitive)
+        id         = "i-02ae66f368e8518a9"
+      ~ list_field = [
+          - (sensitive),
+          + (sensitive),
+            "friends",
+        ]
     }
 `,
 		},
@@ -3760,25 +3846,39 @@ func TestResourceChange_sensitiveVariable(t *testing.T) {
 			Before: cty.ObjectVal(map[string]cty.Value{
 				"id":  cty.StringVal("i-02ae66f368e8518a9"),
 				"ami": cty.StringVal("ami-BEFORE"),
+				"list_field": cty.ListVal([]cty.Value{
+					cty.StringVal("hello"),
+					cty.StringVal("friends"),
+				}),
 			}),
 			After: cty.NullVal(cty.EmptyObject),
 			BeforeValMarks: []cty.PathValueMarks{
 				{
 					Path:  cty.Path{cty.GetAttrStep{Name: "ami"}},
 					Marks: cty.NewValueMarks("sensitive"),
-				}},
+				},
+				{
+					Path:  cty.Path{cty.GetAttrStep{Name: "list_field"}, cty.IndexStep{Key: cty.NumberIntVal(1)}},
+					Marks: cty.NewValueMarks("sensitive"),
+				},
+			},
 			RequiredReplace: cty.NewPathSet(),
 			Tainted:         false,
 			Schema: &configschema.Block{
 				Attributes: map[string]*configschema.Attribute{
-					"id":  {Type: cty.String, Optional: true, Computed: true},
-					"ami": {Type: cty.String, Optional: true},
+					"id":         {Type: cty.String, Optional: true, Computed: true},
+					"ami":        {Type: cty.String, Optional: true},
+					"list_field": {Type: cty.List(cty.String), Optional: true},
 				},
 			},
 			ExpectedOutput: `  # test_instance.example will be destroyed
   - resource "test_instance" "example" {
-      - ami = (sensitive)
-      - id  = "i-02ae66f368e8518a9" -> null
+      - ami        = (sensitive)
+      - id         = "i-02ae66f368e8518a9" -> null
+      - list_field = [
+          - "hello",
+          - (sensitive),
+        ] -> null
     }
 `,
 		},
