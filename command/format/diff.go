@@ -768,7 +768,7 @@ func (p *blockBodyDiffPrinter) writeValueDiff(old, new cty.Value, indent int, pa
 	typesEqual := ctyTypesEqual(ty, new.Type())
 
 	// If either the old or new value is marked, don't display the value
-	if old.ContainsMarked() || new.ContainsMarked() {
+	if old.IsMarked() || new.IsMarked() {
 		p.buf.WriteString("(sensitive)")
 		return
 	}
@@ -1104,10 +1104,18 @@ func (p *blockBodyDiffPrinter) writeValueDiff(old, new cty.Value, indent int, pa
 					action = plans.Create
 				} else if new.HasIndex(kV).False() {
 					action = plans.Delete
-				} else if eqV := old.Index(kV).Equals(new.Index(kV)); eqV.IsKnown() && eqV.True() {
-					action = plans.NoOp
-				} else {
-					action = plans.Update
+				}
+
+				// Use unmarked values for equality testing
+				if old.HasIndex(kV).True() && new.HasIndex(kV).True() {
+					unmarkedOld, _ := old.Index(kV).Unmark()
+					unmarkedNew, _ := new.Index(kV).Unmark()
+					eqV := unmarkedOld.Equals(unmarkedNew)
+					if eqV.IsKnown() && eqV.True() {
+						action = plans.NoOp
+					} else {
+						action = plans.Update
+					}
 				}
 
 				if action == plans.NoOp && p.concise {
