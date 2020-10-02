@@ -162,32 +162,40 @@ func (m *Meta) providerInstallSource() getproviders.Source {
 // package have been modified outside of the installer. If it returns an error,
 // the returned map may be incomplete or invalid.
 func (m *Meta) providerFactories() (map[addrs.Provider]providers.Factory, error) {
-	// We don't have to worry about potentially calling
-	// providerInstallerCustomSource here because we're only using this
-	// installer for its SelectedPackages method, which does not consult
-	// any provider sources.
-	inst := m.providerInstaller()
-	selected, err := inst.SelectedPackages()
-	if err != nil {
-		return nil, fmt.Errorf("failed to recall provider packages selected by earlier 'terraform init': %s", err)
-	}
+	// TODO: Update this to use the dependency lock file instead of the
+	// old "SelectedPackages" concept. We should expect to find all of the
+	// locked providers in our cache directory because a previous run of
+	// "terraform init" should've put them there.
+	return nil, fmt.Errorf("providerFactories is not yet updated to use the lock file")
 
-	// The internal providers are _always_ available, even if the configuration
-	// doesn't request them, because they don't need any special installation
-	// and they'll just be ignored if not used.
-	internalFactories := m.internalProviders()
+	/*
+		// We don't have to worry about potentially calling
+		// providerInstallerCustomSource here because we're only using this
+		// installer for its SelectedPackages method, which does not consult
+		// any provider sources.
+		inst := m.providerInstaller()
+		selected, err := inst.SelectedPackages()
+		if err != nil {
+			return nil, fmt.Errorf("failed to recall provider packages selected by earlier 'terraform init': %s", err)
+		}
 
-	factories := make(map[addrs.Provider]providers.Factory, len(selected)+len(internalFactories)+len(m.UnmanagedProviders))
-	for name, factory := range internalFactories {
-		factories[addrs.NewBuiltInProvider(name)] = factory
-	}
-	for provider, reattach := range m.UnmanagedProviders {
-		factories[provider] = unmanagedProviderFactory(provider, reattach)
-	}
-	for provider, cached := range selected {
-		factories[provider] = providerFactory(cached)
-	}
-	return factories, nil
+		// The internal providers are _always_ available, even if the configuration
+		// doesn't request them, because they don't need any special installation
+		// and they'll just be ignored if not used.
+		internalFactories := m.internalProviders()
+
+		factories := make(map[addrs.Provider]providers.Factory, len(selected)+len(internalFactories)+len(m.UnmanagedProviders))
+		for name, factory := range internalFactories {
+			factories[addrs.NewBuiltInProvider(name)] = factory
+		}
+		for provider, reattach := range m.UnmanagedProviders {
+			factories[provider] = unmanagedProviderFactory(provider, reattach)
+		}
+		for provider, cached := range selected {
+			factories[provider] = providerFactory(cached)
+		}
+		return factories, nil
+	*/
 }
 
 func (m *Meta) internalProviders() map[string]providers.Factory {

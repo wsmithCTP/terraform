@@ -46,6 +46,18 @@ func (l *Locks) Provider(addr addrs.Provider) *ProviderLock {
 	return l.providers[addr]
 }
 
+// AllProviders returns a map describing all of the provider locks in the
+// receiver.
+func (l *Locks) AllProviders() map[addrs.Provider]*ProviderLock {
+	// We return a copy of our internal map so that future calls to
+	// SetProvider won't modify the map we're returning, or vice-versa.
+	ret := make(map[addrs.Provider]*ProviderLock, len(l.providers))
+	for k, v := range l.providers {
+		ret[k] = v
+	}
+	return ret
+}
+
 // SetProvider creates a new lock or replaces the existing lock for the given
 // provider.
 //
@@ -62,14 +74,33 @@ func (l *Locks) SetProvider(addr addrs.Provider, version getproviders.Version, c
 		panic(fmt.Sprintf("Locks.SetProvider with non-lockable provider %s", addr))
 	}
 
-	new := &ProviderLock{
+	new := NewProviderLock(addr, version, constraints, hashes)
+	l.providers[new.addr] = new
+	return new
+}
+
+// NewProviderLock creates a new ProviderLock object that isn't associated
+// with any Locks object.
+//
+// This is here primarily for testing. Most callers should use Locks.SetProvider
+// to construct a new provider lock and insert it into a Locks object at the
+// same time.
+//
+// Only lockable providers can be passed to this method. If you pass a
+// non-lockable provider address then this function will panic. Use
+// function ProviderIsLockable to determine whether a particular provider
+// should participate in the version locking mechanism.
+func NewProviderLock(addr addrs.Provider, version getproviders.Version, constraints getproviders.VersionConstraints, hashes []getproviders.Hash) *ProviderLock {
+	if !ProviderIsLockable(addr) {
+		panic(fmt.Sprintf("Locks.NewProviderLock with non-lockable provider %s", addr))
+	}
+
+	return &ProviderLock{
 		addr:               addr,
 		version:            version,
 		versionConstraints: constraints,
 		hashes:             hashes,
 	}
-	l.providers[addr] = new
-	return new
 }
 
 // ProviderIsLockable returns true if the given provider is eligible for

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -422,9 +421,9 @@ the backend configuration is present and valid.
 func (c *InitCommand) getProviders(config *configs.Config, state *states.State, upgrade bool, pluginDirs []string) (output, abort bool, diags tfdiags.Diagnostics) {
 	// First we'll collect all the provider dependencies we can see in the
 	// configuration and the state.
-	reqs, moreDiags := config.ProviderRequirements()
-	diags = diags.Append(moreDiags)
-	if moreDiags.HasErrors() {
+	reqs, hclDiags := config.ProviderRequirements()
+	diags = diags.Append(hclDiags)
+	if hclDiags.HasErrors() {
 		return false, true, diags
 	}
 	stateReqs := make(getproviders.Requirements, 0)
@@ -445,6 +444,10 @@ func (c *InitCommand) getProviders(config *configs.Config, state *states.State, 
 			))
 		}
 	}
+
+	previousLocks, moreDiags := c.lockedDependencies()
+	diags = diags.Append(moreDiags)
+
 	if diags.HasErrors() {
 		return false, true, diags
 	}
@@ -730,7 +733,7 @@ func (c *InitCommand) getProviders(config *configs.Config, state *states.State, 
 	ctx, done := c.InterruptibleContext()
 	defer done()
 	ctx = evts.OnContext(ctx)
-	selected, err := inst.EnsureProviderVersions(ctx, reqs, mode)
+	newLocks, err := inst.EnsureProviderVersions(ctx, previousLocks, reqs, mode)
 	if ctx.Err() == context.Canceled {
 		c.showDiagnostics(diags)
 		c.Ui.Error("Provider installation was canceled by an interrupt signal.")
@@ -747,29 +750,13 @@ func (c *InitCommand) getProviders(config *configs.Config, state *states.State, 
 		return true, true, diags
 	}
 
-	// If any providers have "floating" versions (completely unconstrained)
-	// we'll suggest the user constrain with a pessimistic constraint to
-	// avoid implicitly adopting a later major release.
-	constraintSuggestions := make(map[string]string)
-	for addr, version := range selected {
-		req := reqs[addr]
+	// TODO: Check whether newLocks is different from previousLocks and mention
+	// in the UI if so. We should emit a different message if previousLocks was
+	// empty, because that indicates we were creating a lock file for the first
+	// time and so we need to introduce the user to the idea of it.
 
-		if len(req) == 0 {
-			constraintSuggestions[addr.ForDisplay()] = "~> " + version.String()
-		}
-	}
-	if len(constraintSuggestions) != 0 {
-		names := make([]string, 0, len(constraintSuggestions))
-		for name := range constraintSuggestions {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-
-		c.Ui.Output(outputInitProvidersUnconstrained)
-		for _, name := range names {
-			c.Ui.Output(fmt.Sprintf("* %s: version = %q", name, constraintSuggestions[name]))
-		}
-	}
+	moreDiags = c.replaceLockedDependencies(newLocks)
+	diags = diags.Append(moreDiags)
 
 	return true, false, diags
 }
