@@ -76,14 +76,18 @@ The resource aws_security_group.allow_all in the module root has been marked as 
 
 ## Example: Tainting a single resource created with for_each
 
-It is necessary to wrap the resource in single quotes and escape the quotes.
 This example will taint a single resource created with for_each:
 
 ```
-$ terraform taint "module.route_tables.azurerm_route_table.rt[\"DefaultSubnet\"]"
+$ terraform taint 'module.route_tables.azurerm_route_table.rt["DefaultSubnet"]'
 The resource module.route_tables.azurerm_route_table.rt["DefaultSubnet"] in the module root has been marked as tainted.
 ```
 
+~> Note: In most `sh` compatible shells, it is necessary to wrap the address in
+single quotes to escape the double quotes in the index. This however varies
+between shells and operating systems, and users should use the appropriate
+escape characters based on the applicable quoting rules for their shell to pass
+the address string, including quotes, to Terraform.
 
 ## Example: Tainting a Resource within a Module
 
