@@ -162,40 +162,64 @@ func (m *Meta) providerInstallSource() getproviders.Source {
 // package have been modified outside of the installer. If it returns an error,
 // the returned map may be incomplete or invalid.
 func (m *Meta) providerFactories() (map[addrs.Provider]providers.Factory, error) {
-	// TODO: Update this to use the dependency lock file instead of the
-	// old "SelectedPackages" concept. We should expect to find all of the
-	// locked providers in our cache directory because a previous run of
-	// "terraform init" should've put them there.
-	return nil, fmt.Errorf("providerFactories is not yet updated to use the lock file")
+	locks, err := m.lockedDependencies()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dependency lock file: %s", err)
+	}
 
-	/*
-		// We don't have to worry about potentially calling
-		// providerInstallerCustomSource here because we're only using this
-		// installer for its SelectedPackages method, which does not consult
-		// any provider sources.
-		inst := m.providerInstaller()
-		selected, err := inst.SelectedPackages()
-		if err != nil {
-			return nil, fmt.Errorf("failed to recall provider packages selected by earlier 'terraform init': %s", err)
-		}
+	// For the providers from the lock file, we expect them to be already
+	// available in the provider cache because "terraform init" should already
+	// have put them there.
+	providerLocks := locks.AllProviders()
+	cacheDir := m.providerLocalCacheDir()
 
-		// The internal providers are _always_ available, even if the configuration
-		// doesn't request them, because they don't need any special installation
-		// and they'll just be ignored if not used.
-		internalFactories := m.internalProviders()
+	// The internal providers are _always_ available, even if the configuration
+	// doesn't request them, because they don't need any special installation
+	// and they'll just be ignored if not used.
+	internalFactories := m.internalProviders()
 
-		factories := make(map[addrs.Provider]providers.Factory, len(selected)+len(internalFactories)+len(m.UnmanagedProviders))
-		for name, factory := range internalFactories {
-			factories[addrs.NewBuiltInProvider(name)] = factory
+	// The Terraform SDK test harness (and possibly other callers in future)
+	// can for use of their own already-started provider servers, which we
+	// call "unmanaged" because Terraform isn't responsible for starting
+	// and stopping them.
+	unmanagedProviders := m.UnmanagedProviders
+
+	factories := make(map[addrs.Provider]providers.Factory, len(providerLocks)+len(internalFactories)+len(unmanagedProviders))
+	for name, factory := range internalFactories {
+		factories[addrs.NewBuiltInProvider(name)] = factory
+	}
+	for provider, lock := range providerLocks {
+		version := lock.Version()
+		cached := cacheDir.ProviderVersion(provider, version)
+		if cached == nil {
+			return nil, fmt.Errorf(
+				"there is no package for %s %s cached in %s",
+				provider, version, cacheDir.BasePath(),
+			)
 		}
-		for provider, reattach := range m.UnmanagedProviders {
-			factories[provider] = unmanagedProviderFactory(provider, reattach)
+		// The cached package must match one of the checksums recorded in
+		// the lock file, if any.
+		if allowedHashes := lock.PreferredHashes(); len(allowedHashes) != 0 {
+			matched, err := cached.MatchesAnyHash(allowedHashes)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to verify checksum of %s %s package cached in in %s: %s",
+					provider, version, cacheDir.BasePath(), err,
+				)
+			}
+			if !matched {
+				return nil, fmt.Errorf(
+					"the cached package for %s %s (in %s) does not match any of the checksums recorded in the dependency lock file",
+					provider, version, cacheDir.BasePath(),
+				)
+			}
 		}
-		for provider, cached := range selected {
-			factories[provider] = providerFactory(cached)
-		}
-		return factories, nil
-	*/
+		factories[provider] = providerFactory(cached)
+	}
+	for provider, reattach := range unmanagedProviders {
+		factories[provider] = unmanagedProviderFactory(provider, reattach)
+	}
+	return factories, nil
 }
 
 func (m *Meta) internalProviders() map[string]providers.Factory {
